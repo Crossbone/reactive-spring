@@ -37,7 +37,7 @@ public class Step8Context {
 	@Test
 	public void verifyContext() {
 
-		Context context = Context.empty();
+		Context context = Context.of("username", "HAL");
 
 		assertThat((String) context.get("username")).isEqualTo("HAL");
 	}
@@ -45,10 +45,10 @@ public class Step8Context {
 	@Test
 	public void verifyContextUsage() {
 
-		Context context = Context.empty();
+		Context context = Context.of("username", "HAL");
 
 		Mono.subscriberContext().map(it -> it.get("username")) //
-				// TODO: Attach context here
+				.subscriberContext(context) //
 				.as(StepVerifier::create) //
 				.expectNext("HAL") //
 				.verifyComplete();
@@ -67,9 +67,9 @@ public class Step8Context {
 				.subscriberContext(context1) //
 				.concatWith(contextKeys.map(it -> "Second: " + it)).subscriberContext(context2) //
 				.as(StepVerifier::create) //
-				// TODO Complete expectation .expectNext("First: …") //
-				// TODO Complete expectation .expectNext("First: …") //
-				// TODO Complete expectation .expectNext("Second: …") //
+				.expectNext("First: password") //
+				.expectNext("First: username") //
+				.expectNext("Second: password") //
 				.verifyComplete();
 	}
 
@@ -78,9 +78,9 @@ public class Step8Context {
 
 		Mono<String> mono = Mono.just("Hello User %s");
 
-		Mono<String> rendered = mono;
-
-		// TODO: apply securityFilter("HAL", …) so that the template renders "Hello User HAL"
+		Mono<String> rendered = mono.flatMap(Step8Context.securityFilter("HAL", inner -> {
+			return getUsername().map(user -> String.format(inner, user));
+		}));
 
 		rendered.as(StepVerifier::create) //
 				.expectNext("Hello User HAL") //
